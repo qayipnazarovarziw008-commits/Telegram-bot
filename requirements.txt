@@ -1,4 +1,4 @@
 pyTelegramBotAPI
 requests
 pillow
-pdf2image
+PyMuPDF
