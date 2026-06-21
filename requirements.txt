@@ -1,3 +1,4 @@
 pyTelegramBotAPI
 requests
 PyMuPDF
+Pillow
