@@ -1,4 +1,5 @@
 pyTelegramBotAPI
 requests
+beautifulsoup4
 PyMuPDF
 Pillow
