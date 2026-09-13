@@ -6,7 +6,7 @@ import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from urllib.parse import urljoin, urlparse
 
-import fitz
+import pymupdf
 import requests
 from bs4 import BeautifulSoup
 import telebot
@@ -23,7 +23,6 @@ if not BOT_TOKEN:
     raise RuntimeError("BOT_TOKEN environment variable topilmadi!")
 
 PORT = int(os.getenv("PORT", "10000"))
-
 MAX_WORKERS = 8
 
 bot = telebot.TeleBot(BOT_TOKEN)
@@ -41,7 +40,7 @@ ZAZAZA_RE = re.compile(
 
 
 # =========================================================
-# HTTP SESSION
+# HTTP
 # =========================================================
 
 HEADERS = {
@@ -66,16 +65,14 @@ def make_session():
 
 def images_to_pdf(image_paths, output_path):
 
-    doc = fitz.open()
+    doc = pymupdf.open()
 
     try:
-
         for image_path in image_paths:
 
-            img_doc = fitz.open(image_path)
+            img_doc = pymupdf.open(image_path)
 
             try:
-
                 img_page = img_doc[0]
                 rect = img_page.rect
 
@@ -90,7 +87,6 @@ def images_to_pdf(image_paths, output_path):
                 )
 
             finally:
-
                 img_doc.close()
 
         doc.save(
@@ -100,7 +96,6 @@ def images_to_pdf(image_paths, output_path):
         )
 
     finally:
-
         doc.close()
 
 
@@ -125,31 +120,25 @@ def get_page_info(chapter_url):
     )
 
     # -----------------------------------------------------
-    # MANHWA NOMI
+    # NOM
     # -----------------------------------------------------
 
     title = soup.find("h1")
 
     if title:
-
         name = title.get_text(
             " ",
             strip=True
         )
-
     else:
-
         title_tag = soup.find("title")
 
         if title_tag:
-
             name = title_tag.get_text(
                 " ",
                 strip=True
             )
-
         else:
-
             name = "Manhwa"
 
     # -----------------------------------------------------
@@ -170,7 +159,6 @@ def get_page_info(chapter_url):
         ["img", "source"]
     ):
 
-        # Oddiy image URL
         for attr in attributes:
 
             value = tag.get(attr)
@@ -190,7 +178,6 @@ def get_page_info(chapter_url):
 
             urls.append(full_url)
 
-        # srcset
         srcset = (
             tag.get("srcset")
             or tag.get("data-srcset")
@@ -206,7 +193,6 @@ def get_page_info(chapter_url):
                 )
 
                 if value:
-
                     urls.append(
                         urljoin(
                             chapter_url,
@@ -215,7 +201,7 @@ def get_page_info(chapter_url):
                     )
 
     # -----------------------------------------------------
-    # DUPLICATLARNI OLIB TASHLASH
+    # DUPLIKATLARNI OLIB TASHLASH
     # -----------------------------------------------------
 
     image_urls = []
@@ -258,7 +244,6 @@ def natural_key(path):
     )
 
     if numbers:
-
         return [
             int(number)
             for number in numbers
@@ -271,7 +256,7 @@ def natural_key(path):
 
 
 # =========================================================
-# BIRTA RASMNI YUKLASH
+# BIRTA RASM
 # =========================================================
 
 def download_one(item):
@@ -292,7 +277,6 @@ def download_one(item):
         ".png",
         ".webp"
     ):
-
         extension = ".jpg"
 
     filename = (
@@ -321,7 +305,6 @@ def download_one(item):
     if content_type and not content_type.startswith(
         "image/"
     ):
-
         raise RuntimeError(
             f"URL rasm qaytarmadi: {url}"
         )
@@ -330,7 +313,6 @@ def download_one(item):
         path,
         "wb"
     ) as file:
-
         file.write(
             response.content
         )
@@ -379,9 +361,7 @@ def download_images(
             job = future_map[future]
 
             try:
-
                 path = future.result()
-
                 paths.append(path)
 
             except Exception as error:
@@ -400,7 +380,7 @@ def download_images(
 
 
 # =========================================================
-# TELEGRAMGA YUBORISH UCHUN NOM
+# FILENAME
 # =========================================================
 
 def safe_filename(name):
@@ -432,10 +412,6 @@ def process_url(
 
     try:
 
-        # -------------------------------------------------
-        # 1. SAYTNI TEKSHIRISH
-        # -------------------------------------------------
-
         bot.send_message(
             chat_id,
             "🔎 Chapter tekshirilmoqda..."
@@ -457,17 +433,9 @@ def process_url(
 
             return
 
-        # -------------------------------------------------
-        # 2. TEMP PAPKA
-        # -------------------------------------------------
-
         temp_dir = tempfile.mkdtemp(
             prefix="manhwa_"
         )
-
-        # -------------------------------------------------
-        # 3. RASMLARNI YUKLASH
-        # -------------------------------------------------
 
         bot.send_message(
             chat_id,
@@ -481,10 +449,6 @@ def process_url(
             temp_dir
         )
 
-        # -------------------------------------------------
-        # 4. YUKLASH XATOLARI
-        # -------------------------------------------------
-
         if not paths:
 
             bot.send_message(
@@ -493,10 +457,6 @@ def process_url(
             )
 
             return
-
-        # -------------------------------------------------
-        # 5. PDF
-        # -------------------------------------------------
 
         bot.send_message(
             chat_id,
@@ -513,10 +473,6 @@ def process_url(
             paths,
             pdf_path
         )
-
-        # -------------------------------------------------
-        # 6. TELEGRAMGA YUBORISH
-        # -------------------------------------------------
 
         filename = (
             safe_filename(name)
@@ -539,10 +495,6 @@ def process_url(
                 file,
                 visible_file_name=filename
             )
-
-        # -------------------------------------------------
-        # 7. YUKLASHDA XATO BO'LGANLAR
-        # -------------------------------------------------
 
         if errors:
 
@@ -576,10 +528,6 @@ def process_url(
 
     finally:
 
-        # -------------------------------------------------
-        # TEMP FAYLLARNI O'CHIRISH
-        # -------------------------------------------------
-
         if temp_dir:
 
             shutil.rmtree(
@@ -608,7 +556,7 @@ def start(message):
 
 
 # =========================================================
-# URL QABUL QILISH
+# URL
 # =========================================================
 
 @bot.message_handler(
@@ -635,7 +583,6 @@ def handle_url(message):
         "⏳ Ishlash boshlandi..."
     )
 
-    # Og‘ir ishni alohida thread'da bajarish
     threading.Thread(
         target=process_url,
         args=(
@@ -647,7 +594,7 @@ def handle_url(message):
 
 
 # =========================================================
-# RENDER HEALTH CHECK
+# HEALTH CHECK
 # =========================================================
 
 @app.get("/")
@@ -716,50 +663,60 @@ def webhook():
 
 
 # =========================================================
-# MAIN
+# WEBHOOKNI GUNICORNDA HAM O'RNATISH
 # =========================================================
 
-if __name__ == "__main__":
+def setup_webhook():
 
     public_url = os.getenv(
         "RENDER_EXTERNAL_URL"
     )
 
-    if public_url:
-
-        webhook_url = (
-            public_url.rstrip("/")
-            + "/webhook"
-        )
-
-        try:
-
-            bot.remove_webhook()
-
-            bot.set_webhook(
-                url=webhook_url
-            )
-
-            print(
-                "Webhook set:",
-                webhook_url
-            )
-
-        except Exception as error:
-
-            print(
-                "Webhook error:",
-                repr(error)
-            )
-
-    else:
+    if not public_url:
 
         print(
-            "RENDER_EXTERNAL_URL topilmadi. "
-            "Webhook o‘rnatilmadi."
+            "RENDER_EXTERNAL_URL topilmadi."
         )
+
+        return
+
+    webhook_url = (
+        public_url.rstrip("/")
+        + "/webhook"
+    )
+
+    try:
+
+        bot.remove_webhook()
+
+        bot.set_webhook(
+            url=webhook_url
+        )
+
+        print(
+            "Webhook set:",
+            webhook_url
+        )
+
+    except Exception as error:
+
+        print(
+            "Webhook ERROR:",
+            repr(error)
+        )
+
+
+# Gunicorn bot:app qilganda ham ishlaydi
+setup_webhook()
+
+
+# =========================================================
+# LOCAL
+# =========================================================
+
+if __name__ == "__main__":
 
     app.run(
         host="0.0.0.0",
         port=PORT
-  )
+    )
