@@ -1,8 +1,6 @@
 pyTelegramBotAPI
-requests
-bs4
+beautifulsoup4
 PyMuPDF
 flask
 gunicorn
 curl_cffi
-
