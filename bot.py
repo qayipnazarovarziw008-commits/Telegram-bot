@@ -5,6 +5,8 @@ import time
 import hashlib
 import shutil
 import tempfile
+import io
+from PIL import Image
 import threading
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -75,22 +77,32 @@ def make_session(referer=None):
 # =========================================================
 
 def images_to_pdf(image_paths, output_path):
+def images_to_pdf(image_paths, output_path):
     doc = pymupdf.open()
     pages = 0
     try:
         for image_path in image_paths:
             try:
-                img_doc = pymupdf.open(image_path)
-                rect = img_doc[0].rect
-                img_doc.close()
+                with Image.open(image_path) as im:
+                    if im.mode in ("RGBA", "LA", "P"):
+                        im = im.convert("RGBA")
+                        bg = Image.new("RGB", im.size, (255, 255, 255))
+                        bg.paste(im, mask=im.split()[-1])
+                        im = bg
+                    else:
+                        im = im.convert("RGB")
+                    w, h = im.size
+                    buf = io.BytesIO()
+                    im.save(buf, format="JPEG", quality=85)
+                data = buf.getvalue()
 
-                w, h = rect.width, rect.height
-                if h > MAX_PAGE_HEIGHT:
-                    scale = MAX_PAGE_HEIGHT / h
-                    w, h = w * scale, MAX_PAGE_HEIGHT
+                pw, ph = float(w), float(h)
+                if ph > MAX_PAGE_HEIGHT:
+                    scale = MAX_PAGE_HEIGHT / ph
+                    pw, ph = pw * scale, MAX_PAGE_HEIGHT
 
-                page = doc.new_page(width=w, height=h)
-                page.insert_image(page.rect, filename=image_path)
+                page = doc.new_page(width=pw, height=ph)
+                page.insert_image(page.rect, stream=data)
                 pages += 1
             except Exception as e:
                 logging.error(f"Rasm PDFga o'tmadi ({image_path}): {e}")
