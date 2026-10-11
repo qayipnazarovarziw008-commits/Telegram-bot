@@ -1,18 +1,18 @@
 import os
 import re
+import io
 import json
 import time
 import hashlib
 import shutil
 import tempfile
-import io
-from PIL import Image
 import threading
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from urllib.parse import urljoin, urlparse
 
 import pymupdf
+from PIL import Image
 from bs4 import BeautifulSoup
 import telebot
 from flask import Flask, request
@@ -77,12 +77,12 @@ def make_session(referer=None):
 # =========================================================
 
 def images_to_pdf(image_paths, output_path):
-def images_to_pdf(image_paths, output_path):
     doc = pymupdf.open()
     pages = 0
     try:
         for image_path in image_paths:
             try:
+                # webp va boshqa formatlarni JPEGga aylantiramiz
                 with Image.open(image_path) as im:
                     if im.mode in ("RGBA", "LA", "P"):
                         im = im.convert("RGBA")
@@ -457,4 +457,4 @@ setup_webhook()
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=PORT)
-  
+    
