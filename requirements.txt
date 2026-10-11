@@ -4,3 +4,4 @@ PyMuPDF
 flask
 gunicorn
 curl_cffi
+Pillow
